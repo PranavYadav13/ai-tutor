@@ -1,10 +1,38 @@
 import React, { useState } from "react";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Send } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function AITutor() {
   const [subject, setSubject] = useState("mathematics");
-  
+  const [question, setQuestion] = useState("");
+  const [response, setResponse] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const analyzeQuestion = async () => {
+    if (!question.trim()) return;
+    setLoading(true);
+    setResponse("");
+
+    try {
+      const genAI = new GoogleGenerativeAI("AIzaSyBzp-T3GQeRUCcBf18RvwuuIKUk0WVg_pQ");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+
+      const prompt = `You are an AI Tutor specializing in ${subject}. Provide a step-by-step solution, real-world applications, and concept explanations for the following question: "${question}"`;
+
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+      });
+
+      const text = result.response?.candidates?.[0]?.content?.parts?.[0]?.text || "No response from AI.";
+      setResponse(text);
+    } catch (error) {
+      setResponse("I couldn't generate a response at the moment. Please try again later.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#6EA8D7] to-[#5BAE7C] overflow-hidden p-10">
       {/* Animated Background Elements */}
@@ -38,16 +66,22 @@ export default function AITutor() {
         </div>
 
         <div className="bg-[#FDFBF6] rounded-xl p-6 h-96 mb-6 overflow-y-auto border border-gray-300 shadow-sm flex items-center justify-center">
-          <p className="text-gray-500 text-lg">Start a conversation with your AI tutor! ✨</p>
+          {loading ? <p className="text-gray-500 text-lg">Analyzing...</p> : <p className="text-gray-500 text-lg whitespace-pre-wrap">{response || "Start a conversation with your AI tutor! ✨"}</p>}
         </div>
 
         <div className="flex gap-3">
           <input
             type="text"
             placeholder="Ask your question..."
+            value={question}
+            onChange={(e) => setQuestion(e.target.value)}
             className="flex-1 rounded-xl border-2 border-gray-300 px-5 py-3 text-lg shadow-sm focus:ring-2 focus:ring-[#5BAE7C]"
           />
-          <button className="bg-[#F5C04C] text-black rounded-xl px-6 py-3 font-semibold text-lg shadow-lg hover:bg-yellow-400 transition flex items-center gap-2">
+          <button
+            onClick={analyzeQuestion}
+            className="bg-[#F5C04C] text-black rounded-xl px-6 py-3 font-semibold text-lg shadow-lg hover:bg-yellow-400 transition flex items-center gap-2"
+            disabled={loading}
+          >
             <Send className="w-6 h-6" />
           </button>
         </div>

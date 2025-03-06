@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { UploadCloud, BookOpen, Pencil } from "lucide-react";
+import { UploadCloud, FileText, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import Tesseract from "tesseract.js";
+import * as pdfjsLib from "pdfjs-dist";
+
+pdfjsLib.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.js";
 
 interface Note {
   id: number;
@@ -10,117 +15,101 @@ interface Note {
 export default function ShortNotes() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
-  const [notesHistory, setNotesHistory] = useState<Note[]>([]);
+  const [notes, setNotes] = useState<Note[]>([]);
 
   useEffect(() => {
     const savedNotes = localStorage.getItem("shortNotes");
-    if (savedNotes) {
-      setNotesHistory(JSON.parse(savedNotes));
-    }
+    if (savedNotes) setNotes(JSON.parse(savedNotes));
   }, []);
 
   useEffect(() => {
-    if (notesHistory.length > 0) {
-      localStorage.setItem("shortNotes", JSON.stringify(notesHistory));
-    }
-  }, [notesHistory]);
+    localStorage.setItem("shortNotes", JSON.stringify(notes));
+  }, [notes]);
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files.length > 0) {
-      setSelectedFile(event.target.files[0]);
-    }
+    const file = event.target.files?.[0] || null;
+    setSelectedFile(file);
   };
 
-  const handleUpload = () => {
-    if (!selectedFile) {
-      alert("Please select a file first.");
-      return;
-    }
-    setLoading(true);
+  const extractTextFromImage = async (file: File) => {
+    const { data } = await Tesseract.recognize(file, "eng");
+    return data.text;
+  };
 
-    setTimeout(() => {
-      const fakeExtractedText = `Extracted text from "${selectedFile.name}": This is a simulated short note.`;
-      setNotesHistory((prevNotes) => [{ id: Date.now(), text: fakeExtractedText }, ...prevNotes]);
+  const extractTextFromPDF = async (file: File) => {
+    const reader = new FileReader();
+    return new Promise<string>((resolve, reject) => {
+      reader.onload = async () => {
+        try {
+          const pdf = await pdfjsLib.getDocument({ data: new Uint8Array(reader.result as ArrayBuffer) }).promise;
+          let text = "";
+          for (let i = 1; i <= pdf.numPages; i++) {
+            const page = await pdf.getPage(i);
+            const content = await page.getTextContent();
+            text += content.items.map((item: any) => item.str).join(" ") + " ";
+          }
+          resolve(text);
+        } catch (error) {
+          reject(error);
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    });
+  };
+
+  const handleUpload = async () => {
+    if (!selectedFile) return alert("Please select a file first.");
+    setLoading(true);
+    try {
+      const extractedText = selectedFile.type.includes("image")
+        ? await extractTextFromImage(selectedFile)
+        : await extractTextFromPDF(selectedFile);
+
+      const genAI = new GoogleGenerativeAI("AIzaSyBzp-T3GQeRUCcBf18RvwuuIKUk0WVg_pQ");
+      const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+      const result = await model.generateContent({
+        contents: [{ role: "user", parts: [{ text: `Summarize: ${extractedText}` }] }],
+      });
+      
+      const text = result.response?.candidates?.[0]?.content?.parts?.[0]?.text || "No response from AI.";
+      setNotes((prev) => [{ id: Date.now(), text }, ...prev]);
+    } catch (error) {
+      console.error("Error generating notes:", error);
+    } finally {
       setLoading(false);
-    }, 2000);
+    }
   };
 
   return (
-    <div className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-[#6EA8D7] to-[#5BAE7C] overflow-hidden p-10">
-      <div className="absolute inset-0 z-0">
-        {[...Array(10)].map((_, index) => (
-          <motion.div
-            key={index}
-            className="absolute w-40 h-40 rounded-full opacity-40"
-            style={{ backgroundColor: index % 2 === 0 ? "#F5C04C" : "#C9A0DC" }}
-            initial={{ x: Math.random() * window.innerWidth, y: Math.random() * window.innerHeight }}
-            animate={{ y: ["0vh", "100vh"], rotate: [0, 360] }}
-            transition={{ duration: 15 + Math.random() * 10, repeat: Infinity, ease: "linear" }}
-          />
-        ))}
-      </div>
-
-      <div className="relative bg-white rounded-2xl shadow-2xl p-8 w-full max-w-4xl z-10 border border-gray-200">
-        <h2 className="text-3xl font-extrabold text-gray-900 mb-6 text-center">📖 Short Notes Generator</h2>
-        
-        <motion.div 
-          whileHover={{ scale: 1.05 }}
-          className="border-dashed border-4 border-gray-500 p-8 rounded-xl text-center bg-white shadow-lg hover:bg-gray-100 transition"
-        >
-          <label className="cursor-pointer">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-500 to-green-500 p-10">
+      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-3xl border border-gray-300">
+        <h2 className="text-3xl font-bold text-center mb-6">📖 Short Notes Generator</h2>
+        <motion.div whileHover={{ scale: 1.05 }} className="border-2 border-dashed border-gray-400 p-6 rounded-lg text-center cursor-pointer bg-gray-50">
+          <label>
             <input type="file" accept="image/*,.pdf" onChange={handleFileChange} className="hidden" />
             <div className="flex flex-col items-center">
-              <UploadCloud className="w-14 h-14 text-gray-700 mb-3 animate-pulse" />
-              <p className="text-gray-900 font-medium text-lg">
-                {selectedFile ? selectedFile.name : "Click to upload a PDF or image"}
-              </p>
+              <UploadCloud className="w-12 h-12 text-gray-600" />
+              <p className="text-gray-700 mt-2">{selectedFile ? selectedFile.name : "Upload PDF or Image"}</p>
             </div>
           </label>
         </motion.div>
-
-        <button
-          onClick={handleUpload}
-          className="mt-8 px-8 py-4 bg-[#F5C04C] text-black text-xl font-semibold rounded-lg hover:bg-yellow-400 transition shadow-lg flex items-center justify-center gap-3"
+        <button 
+          onClick={handleUpload} 
+          className={`mt-6 w-full py-3 rounded-lg text-white font-semibold ${loading ? "bg-gray-400" : "bg-yellow-500 hover:bg-yellow-600"}`} 
           disabled={loading}
         >
-          {loading ? (
-            <div className="flex items-center gap-3">
-              <span>Processing</span>
-              <motion.div className="relative w-8 h-8 flex items-center">
-                <motion.div
-                  className="absolute inset-0 w-8 h-8"
-                  animate={{ rotateY: [0, 180, 0] }}
-                  transition={{ repeat: Infinity, duration: 0.5 }}
-                >📖</motion.div>
-              </motion.div>
-            </div>
-          ) : (
-            <>
-              <Pencil className="w-6 h-6 text-black" /> Generate Notes
-            </>
-          )}
+          {loading ? <Loader2 className="w-6 h-6 animate-spin mx-auto" /> : "Generate Notes"}
         </button>
-
-        <div className="mt-8 bg-[#FDFBF6] p-6 rounded-lg shadow-lg max-h-96 overflow-y-auto border border-gray-300">
-          <h3 className="text-2xl font-bold text-gray-900 mb-4">📜 Generated Short Notes</h3>
-          {notesHistory.length === 0 ? (
-            <p className="text-gray-500 text-center text-lg">No notes generated yet. Try uploading a file! ✨</p>
+        <div className="mt-6 bg-gray-100 p-4 rounded-lg max-h-64 overflow-y-auto">
+          <h3 className="text-lg font-bold mb-2">📜 Generated Notes</h3>
+          {notes.length === 0 ? (
+            <p className="text-gray-500 text-center">No notes yet. Upload a file to get started!</p>
           ) : (
-            <ul className="space-y-4">
-              {notesHistory.map((note) => (
-                <li
-                  key={note.id}
-                  className="p-5 bg-gray-200 shadow-md rounded-lg text-gray-900 font-medium flex items-center gap-3 hover:bg-gray-300 transition"
-                >
-                  <motion.div 
-                    className="pointer-events-none"
-                    initial={{ y: 0 }}
-                    whileHover={{ y: -5 }}
-                    transition={{ type: "spring", stiffness: 300 }}
-                  >
-                    <BookOpen className="w-7 h-7 text-gray-700" />
-                  </motion.div>
-                  {note.text}
+            <ul className="space-y-3">
+              {notes.map((note) => (
+                <li key={note.id} className="p-3 bg-white shadow rounded-lg flex items-start">
+                  <FileText className="w-5 h-5 text-gray-600 mr-2" />
+                  <p>{note.text}</p>
                 </li>
               ))}
             </ul>
