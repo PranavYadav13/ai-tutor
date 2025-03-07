@@ -6,6 +6,7 @@ import {
   FileText,
   ClipboardList,
   Trophy,
+  Info,
   LogOut,
   Menu,
   X
@@ -16,6 +17,7 @@ import AITutor from '../components/AITutor';
 import ShortNotes from '../components/ShortNotes';
 import Tests from '../components/Tests';
 import Leaderboard from '../components/Leaderboard';
+import About from '../components/About';
 
 export default function Dashboard() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -27,6 +29,7 @@ export default function Dashboard() {
     { name: 'Short Notes', icon: FileText, path: '/notes' },
     { name: 'Tests', icon: ClipboardList, path: '/tests' },
     { name: 'Leaderboard', icon: Trophy, path: '/leaderboard' },
+    { name: 'About', icon: Info, path: '/about' },
   ];
 
   const handleNavigation = (path: string) => {
@@ -107,6 +110,7 @@ export default function Dashboard() {
           <Route path="/notes" element={<ShortNotes />} />
           <Route path="/tests" element={<Tests />} />
           <Route path="/leaderboard" element={<Leaderboard />} />
+          <Route path="/about" element={<About />} />
           <Route path="/" element={<AITutor />} />
         </Routes>
       </main>

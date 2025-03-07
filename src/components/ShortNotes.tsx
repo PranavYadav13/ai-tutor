@@ -65,7 +65,7 @@ export default function ShortNotes() {
         ? await extractTextFromImage(selectedFile)
         : await extractTextFromPDF(selectedFile);
 
-      const genAI = new GoogleGenerativeAI("AIzaSyBzp-T3GQeRUCcBf18RvwuuIKUk0WVg_pQ");
+      const genAI = new GoogleGenerativeAI("AIzaSyAWNsfdKP2KEAT3_W9dBtM2WFr5GwOKl5Y");
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       const result = await model.generateContent({
         contents: [{ role: "user", parts: [{ text: `Summarize: ${extractedText}` }] }],
@@ -81,8 +81,35 @@ export default function ShortNotes() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-500 to-green-500 p-10">
-      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-3xl border border-gray-300">
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-blue-500 to-green-500 p-10 overflow-hidden">
+      {/* Animated Background */}
+<div className="absolute inset-0 z-0">
+  {[...Array(10)].map((_, index) => {
+    const randomX = Math.random() * 100; // Random percentage for X position
+    const randomY = Math.random() * 100; // Random percentage for Y position
+    return (
+      <motion.div
+        key={index}
+        className="absolute w-40 h-40 rounded-full opacity-40"
+        style={{
+          backgroundColor: index % 2 === 0 ? "#00FF7F" : "#FF4500",
+          top: `${randomY}%`,
+          left: `${randomX}%`,
+        }}
+        initial={{ y: 0, rotate: 0 }}
+        animate={{ y: "100vh", rotate: 360 }}
+        transition={{
+          duration: 15 + Math.random() * 10,
+          repeat: Infinity,
+          ease: "linear",
+        }}
+      />
+    );
+  })}
+</div>
+  
+
+      <div className="bg-white rounded-lg shadow-lg p-8 w-full max-w-3xl border border-gray-300 relative z-10">
         <h2 className="text-3xl font-bold text-center mb-6">📖 Short Notes Generator</h2>
         <motion.div whileHover={{ scale: 1.05 }} className="border-2 border-dashed border-gray-400 p-6 rounded-lg text-center cursor-pointer bg-gray-50">
           <label>

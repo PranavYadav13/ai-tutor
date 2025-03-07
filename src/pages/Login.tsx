@@ -14,7 +14,7 @@ export default function Login() {
     e.preventDefault();
     try {
       await signIn(email, password);
-      navigate('/');
+      navigate('/about');  // Redirect to the About page after login
     } catch (error) {
       if (error instanceof Error && error.message.includes('Supabase configuration is missing')) {
         setError('Please set up Supabase first by clicking the "Connect to Supabase" button.');
