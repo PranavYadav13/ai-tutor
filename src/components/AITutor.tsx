@@ -68,7 +68,7 @@ export default function AITutor() {
     setResponse("");
 
     try {
-      const genAI = new GoogleGenerativeAI("AIzaSyC3_Hgvk_9mYgQuqJ4sp2itNESrSfz9iSk");
+      const genAI = new GoogleGenerativeAI("AIzaSyBZIEmGgINy3iTk3XgdslMfehLm4bAmEVI");
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
       const prompt = 'You are an AI Tutor specializing in ${subject}, also fluent in many native languages. Provide a step-by-step solution, real-world applications, and concept explanations for the following question: "${question}", translate it to the requested language and by default language is English, in 150 - 160 words(per language).';
