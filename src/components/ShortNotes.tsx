@@ -89,7 +89,7 @@ export default function ShortNotes() {
             <input type="file" accept="image/*,.pdf" onChange={handleFileChange} className="hidden" />
             <div className="flex flex-col items-center">
               <UploadCloud className="w-12 h-12 text-gray-600" />
-              <p className="text-gray-700 mt-2">{selectedFile ? selectedFile.name : "Upload PDF or Image"}</p>
+              <p className="text-gray-700 mt-2">{selectedFile ? selectedFile.name : "Upload an Image"}</p>
             </div>
           </label>
         </motion.div>
