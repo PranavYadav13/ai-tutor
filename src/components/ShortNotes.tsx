@@ -65,7 +65,7 @@ export default function ShortNotes() {
         ? await extractTextFromImage(selectedFile)
         : await extractTextFromPDF(selectedFile);
 
-      const genAI = new GoogleGenerativeAI("AIzaSyC3_Hgvk_9mYgQuqJ4sp2itNESrSfz9iSk");
+      const genAI = new GoogleGenerativeAI("AIzaSyBZIEmGgINy3iTk3XgdslMfehLm4bAmEVI");
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
       const result = await model.generateContent({
         contents: [{ role: "user", parts: [{ text: `Summarize: ${extractedText}` }] }],
