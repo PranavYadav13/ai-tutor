@@ -45,13 +45,21 @@ export default function AITutor() {
       alert("Text-to-Speech is not supported in your browser.");
       return;
     }
-
+  
+    // Check if speech is currently active
+    if (window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel(); // Stop speech
+      return;
+    }
+  
     const speech = new SpeechSynthesisUtterance(response);
     speech.lang = "en-US";
     speech.rate = 1;
     speech.pitch = 1;
+  
     window.speechSynthesis.speak(speech);
   };
+  
 
   // AI Analysis
   const analyzeQuestion = async () => {
